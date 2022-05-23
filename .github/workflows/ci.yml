@@ -8,4 +8,4 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run tests
-        run: react-scripts test --watchAll=false
+        run: npx react-scripts test --watchAll=false
