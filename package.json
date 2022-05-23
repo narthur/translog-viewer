@@ -21,7 +21,8 @@
     "build": "react-scripts build",
     "qual": "react-scripts test",
     "test": "npm run qual",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "lint": "eslint . --max-warnings 0"
   },
   "eslintConfig": {
     "extends": [
