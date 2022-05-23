@@ -19,7 +19,8 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test",
+    "qual": "react-scripts test",
+    "test": "npm run qual",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
