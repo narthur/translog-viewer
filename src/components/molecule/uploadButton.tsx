@@ -8,11 +8,17 @@ import {
 } from "@mui/material";
 import React, { ChangeEvent, useState } from "react";
 
+declare module "./uploadButton" {
+  function __uploadData(data: any): void;
+}
+
+export type UploadButtonProps = {
+  onUpload?: (data: File) => void;
+};
+
 export default function UploadButton({
   onUpload,
-}: {
-  onUpload?: (data: File) => void;
-}): JSX.Element {
+}: UploadButtonProps): JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
   const [data, setData] = useState<File>();
   return (

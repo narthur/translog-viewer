@@ -1,0 +1,541 @@
+404:
+    signature: 404 x r
+    source: app/controllers/application_controller.rb
+    docs: |  
+      Eg: 404 /butts http://google.com?q=butts
+        A requested URL returned a 404 Not Found. Resource x is what comes after the
+        bmndr.com in the URL and r is the HTTP referrer aka referer header.
+        If x contains weird characters then its entry in translog is suppressed.
+ADD:
+    signature: ADD u/g t c u                                          
+    source: app/models/datapoint.rb
+    docs: |
+      Eg: ADD bob/foo 1234567890 web 28 123 "i weighed 123 on the 28th"
+        New datapoint added to u/g with timestamp t, origin code c, and urtext u.
+      Possible origin codes:
+        eml: entered by emailing the bot
+        web: entered via the beeminder website
+        sms: entered by texting the bot
+        wit: automatically entered from withings scale
+        tgt: automatically entered from tagtime
+        imp: imported to beeminder (hasn't been used yet)
+        EDT: datapoint edited on web (there'll be a preceding DEL entry if so)
+      TODO: Double check that this matches the code and that the list of origin
+        codes is complete.
+      TODO: Especially double check that "EDT" is a separate origin code and not
+        a special one that's just prepended to another origin code because that
+        would mean a special case is needed to parse this.
+ADE:
+    signature: TODO
+    source: TODO
+    docs: |
+      TODO: This was supposed to be for autodata errors but doesn't occur in the
+        code. Is it safe to get rid of this? Does AIR cover this?
+AIR:
+    signature: AIR ERR c s                                                        
+    source: lib/util.rb
+    docs: |
+      Eg: AIR ERR 500 Error: undefined method `username' for nil:NilClass
+        Something bad or noteworthy happened, with summary s, that we'll have been
+        emailed about. (But exceptions caught automatically by airbrake are not
+        currently translogged.)
+      TODO: The error code c is presumably an HTTP response code. Is that always
+        user-facing or this includes internal API calls too? Anything besides
+        HTTP requests? What would the error code be if it's not an HTTP request?
+      TODO: Is the "ERR" part of this redundant?
+AKD:
+    signature: AKD f u/g                                          
+    source: lib/akrasia_proof_fields.rb
+    docs: |
+      Eg: AKD archived bob/foo
+        User u scheduled a change in akrasia-proof field f of goal g.
+API:
+    signature: API t u e                            
+    source: app/controllers/api/v1/base_controller.rb
+    docs: |
+      Eg: API pauth alice /api/v1/users/alice/goals/weight/datapoints.json
+        API call made with auth type t (in {pauth, oauth}) for user u, hitting
+        endpoint e.
+ASQ:
+    signature: ASQ u/g                                                     [app/models/goal.rb]
+  Eg: ASQ bob/foo
+    Skipped doing a refresh for goal u/g because it was already queued
+    AUT u p                                 [app/controllers/services_controller.rb]
+  Eg: AUT bob facebook
+    AUT new facebook
+    User u added auth provider p (eg, google_oauth2, facebook, withings, etc --
+    omniauth["provider"] in the code). If it's a new user created using the
+    auth provider then u will just be "new" instead of a username. Look for a
+    corresponding USR entry nearby in the translog in this case.
+    BBD u/g t i o                                      [app/performers/graph_job.rb]
+  Eg: BBD bob/foo 1234567890 12345 maint
+    Completed graph_job (rebraining) for goal u/g what was enqueued at time t,
+    with pid i, and origin o (eg, "maint", "rfj", "email") indicating what
+    instagated it.
+    BBE u/g s                                                                 [TODO]
+  Eg: BBE bob/foo Road dial error\n(Your goal date, goal value, & rate are...
+    Beebrain error with text s.
+  TODO: Only an airhorn currently? Cc'd to support.
+    BBR u/g t i o n                                    [app/performers/graph_job.rb]
+  Eg: BBR bob/foo 12345678900 12345 maint 23456
+    Goal u/g was pulled off the queue and started processing; it was enqueued at
+    timestamp t (diff between now -- the translog entry's timestamp -- and t
+    is the wait time on the queue) with pid i, origin o (see BBD), and new UID
+    n.
+    BBS u/g t p o n                                    [app/performers/graph_job.rb]
+  Eg: BBS bob/foo 12345678900 1234 maint TODO
+    Goal u/g, with pid p from origin o, was pulled off the queue for braining
+    but skipped because it had been processed since it was originally enqueued
+    at timestamp t.
+  TODO: what's "newuid" and what are the possible "origin" codes?
+    CAK u/g a                            [app/performers/contract_charge_sweeper.rb]
+  Eg: CAK bob/foo 5
+    Found a pending charge of $a on an archived goal, but we don't charge
+    archived goals so turn off pending at.
+  TODO: what does "turn off pending at" mean? Something about a pending_at
+    field to keep track of when to charge the user?
+    CCC u/g x t                                             [app/models/contract.rb]
+  Eg: CCC bob/foo 5 1234567890
+    User u, goal g, canceled a charge of $x, scheduled for unixtime t.
+    CCH u x                                                   [app/models/charge.rb]
+  Eg: CCH bob 5
+    Cancel charge of $x for user u.
+  TODO: Confirm there are instances of this in the translog because at some
+    point we had a note here in the documentation that it didn't occur in the
+    recent translog.
+    CDL u/g a                            [app/performers/contract_charge_sweeper.rb]
+  Eg: CDL bob/foo 5
+    Charge sweeper found a pending charge on a deleted goal (so don't charge
+    it).
+    CHA u x /deprecate                                  [app/mailers/user_mailer.rb]
+  # SCHDEL
+  Eg: CHA bob 5
+    Alerted user u that they've been charged $x through the API.
+  TODO: why does this say "/deprecate" and "SCHDEL"? it's still in the code.
+    CHE u x                                     [app/performers/charge_error_job.rb]
+  Eg: CHE bob 5
+    Alerted user u that there was an error charging their card for $x.
+    CNC u/g a                            [app/controllers/admin/goals_controller.rb]
+  Eg: CNC bob/foo 5
+    Admin canceled a charge of $a on goal u/g.
+    CNF e                                                 [app/models/supporting.rb]
+  Eg: CNF bob@mail.com
+    Sent a confirmation email to a new supporter email address e.
+  TODO: Shouldn't this also include the user/goal that this is for? See next
+    entry.
+    CNF u e                                                    [app/models/wuser.rb]
+  Eg: CNF bob alice@example.com
+  TODO: Why is there a version of this without the user? And shouldn't this
+    also include the goal? What exactly causes this translog entry?
+    CON u/g a                                               [app/models/contract.rb]
+  Eg: CON bob/foo 5
+    Created a new contract on goal u/g of $a.
+  TODO: What user-visible events does this correspond to? Creating a new goal?
+    Derailing and recommitting?
+    CPY u a                                                   [app/models/charge.rb]
+  Eg: CPY bob 1
+    Charged user u $a (using Charges, so either for failed goal pledges, or API,
+    or freebees, or something out of the ordinary).
+    CRD u/g a                  [app/controllers/api/private/contracts_controller.rb]
+  Eg: CRD bob/foo 5
+    New pledge of $a added on goal u/g
+  TODO: why did this say "TODO: through a private api controller?"?
+  TODO: why did this say "#deprecate in favor of PAY or whatever"?
+  TODO: it seems like this is actually about adding a new pledge, nothing to
+    do with adding a credit card like "CRD" was probably supposed to mean.
+    CSD u/g y x                                             [app/models/contract.rb]
+  Eg: CSD bob/foo 10 5
+    User u, goal g, canceled a scheduled a step-down from $y to $x.
+    DCR u/g/ a                           [app/controllers/admin/goals_controller.rb]
+  Eg: DCR bob/foo 5
+    Admin delayed the charge of $a on goal u/g by 48 hours.
+    DED undocumented [deadman switch activated]                               [TODO]
+  TODO: What happened to this?
+    DEL [EDT] u/g t x                                      [app/models/datapoint.rb]
+  Eg: DEL bob/foo 1234567890 28 123 "i weighed 123 on the 28th"
+    Datapoint with timestamp t and urtext x was destroyed. If it includes EDT
+    then it's part of an  edit and there will be a following ADD entry.
+  TODO: Confirm that this matches the code. Also see if this is consistent
+    with how ADD adds the "EDT" string.
+    DEN u                                         [app/views/shared/_flash.html.erb]
+  Eg: DEN "bob"
+    User u tried to log in and got an "Invalid login or password" error.
+  TODO: What is params[:user][:login] exactly? The username they tried to log
+    in with?
+  TODO: And what's up with the literal quotes around whatever "login" is?
+    That doesn't seem consistent with the syntax of other translog entries.
+    DES c u                                        [config/initializers/songkick.rb]
+  Eg: DES TODO
+  TODO: What is this for and what are client.name and client.owner.username?
+    DNT u a c                                               [app/models/donation.rb]
+  Eg: DNT bob 90 watsi
+    User u donated $a to charity c.
+  TODO: What are the possible strings for identifying the charities?
+    What exactly triggers this translog? A derail? A charge?
+    Is it always paired with charge event?
+    What if it's PayPal and not Stripe? Is the division by 100 wrong in
+    that case?
+    EAD e u/g s                            [app/controllers/email_bot_controller.rb]
+  Eg: EAD bob@example.com bob/foo Re: bob/foo on 10/28 (2 safe days): respond
+        with beeminder data
+    Someone sent something with subject s to the bot for user u, goal g, from a
+    new email address, e, so we added that address to USR's list of addresses.
+    EEM e s                                [app/controllers/email_bot_controller.rb]
+  Eg: EEM bob@example.com have you accepted cheese as your savior?
+    Bot got an unactionable email from email address e with subject s.
+    EMF u e s                                [app/controllers/mailgun_controller.rb]
+  Eg: EMF bob bob@example.com Eep! +3 due on bob/foo by 5pm
+    An email to user u at email address e with subject line s failed to be
+    delivered due to a temporary failure.
+    ERR u/g c u                                                 [app/models/goal.rb]
+  Eg: ERR bob/foo web 32 123
+    Error parsing datapoint with origin code c and urtext u. See ADD for the
+    origin codes.
+    ERR sms x                                    [app/controllers/sms_controller.rb]
+  TODO: What is this exactly? Is it the same as ESM below?
+    ESM p m                                      [app/controllers/sms_controller.rb]
+  Eg: +15552767285 blah yadda blah
+    Bot got an unactionable SMS, m, from the phone number p.
+  GLF u/g f: a -> b                                           [app/models/goal.rb]
+    [lib/reminders.rb]
+    [app/performers/graph_job.rb]
+    Eg: GLF bob/foo yaw: 1 -> -1
+    User u, goal f, changed goal field f from a to b. There's a list of excluded
+    fields which don't get logged.
+    TODO: what is this seemingly nonconformant line doing in app/models/goal.rb:
+            trlog("GLF #{shortname} #{desc}")
+    GLT u s                                             [app/mailers/user_mailer.rb]
+  Eg: GLT bob Subject: Come back to Beeminder, maybe?
+    Sent a guilt trip email to a deadmanned subscriber in hopes they'll come
+    back to us.
+  TODO: The s in "GLT u s" is being filled in as @user.subscription which
+    doesn't look like what's in the example above. Which is true? Which should
+    be true?
+    GOL u/g                                                     [app/models/goal.rb]
+  Eg: GOL bob/foo
+    New goal created.
+    IOU t x bmndr u "r" [bal=c]                                      [lib/credit.rb]
+  Eg: IOU 1234567890 3 bmndr bob "giving bob $3 for being so great" [bal=103]
+    User bob is getting $x of credit added to their balance bringing their new
+    balance to $c at time t for reason r. The literal "bmndr" is included so
+  that these entries conform to the standard Yootles format: time, amount,
+    from, to, reason. Note that time t need not be the same as the timestamp
+    of the translog entry itself. Note also the literal "[bal=___]" in
+    brackets at the end of the translog line as a sanity check. See
+    doc.bmndr.com/credit
+  TODO: Drop the quotation marks around the reason.
+  TODO: Danny & Bee discuss the new final section of doc.bmndr.com/credit and
+    decide if that's worth it to be fully consistent and all double-entry
+    accounting with all charges and refunds.
+    LGT u/g x                                           [app/mailers/goal_mailer.rb]
+  Eg: LGT bob/foo 5
+    An automated 'legitquery' email was sent to user u about goal g after they
+    lost $x.
+    LGW u/g x                                           [app/mailers/goal_mailer.rb]
+  Eg: LGW bob/foo 5
+    An automated 'legit win' email was sent to user u about goal g after they
+    successfully reached the goal date with $x pledged.
+    LUZ u/g a                                                   [app/models/goal.rb]
+  Eg: LUZ bob/foo 5
+    Goal just derailed at $a. If there's no contract then a will be "nil".
+    MAS c u f s                                      [app/performers/mailgun_job.rb]
+  Eg: MAS bob 4 happy new year
+    Sent a mass email to user u by sending to those at frequency f with subject
+  s. Possible values for the frequency: 4 for daily, 3 for weekly, 2 for
+    monthly, 1 for yearly, and nil for nilly (which is monthly but applies to
+    users who are only monthly because they never explicitly chose a beemail
+    frequency, i.e., almost everyone. The code c says whether it was sent for
+    real (WET), sent as a dry run (DRY), or couldn't send due to and error
+    (ERR).
+  TODO: Make that true for the "WET" code; currently the wet case has no code
+    at all. Also clarify what ERR means; did it definitely not send? What's an
+    example of something that would cause an error / where can such errors come
+    from? Mailgun's API?
+    NCH u/g a                            [app/performers/contract_charge_sweeper.rb]
+  Eg: bob/foo 5
+  TODO: Something about a user having a pending amount getting... swept?
+    NOP url                                    [app/performers/iwc_remote_stream.rb]
+  Eg: "httu://not.a.real.url-com"
+    Error posting to registered callback url in IWC remote stream.
+    NSF p                                                                     [TODO]
+  Eg: NSF foo
+    No such file exception rescued in Beebrain controller.
+    P-- u/g a b                          [app/controllers/admin/goals_controller.rb]
+  Eg: P-- bob/foo 5 0
+    Admin decremented the pledge on goal u/g from $a down to $b
+    P++ u/g a b                          [app/controllers/admin/goals_controller.rb]
+  Eg: P++ bob/foo 5 10
+    Admin incremented the pledge on goal u/g/ from $a up to $b
+  TODO: Let's change this to PUP and P-- to PDN
+    PAY u/g x r                                             [app/models/contract.rb]
+  Eg: PAY bob/foo 5 DRL
+    User u, goal g just paid $x for reason r in {DRL, SHC, SPC}.
+  See also: CPY, SBP.
+  TODO: The actual code is not including a reason currently.
+    PCC u n                                                     [app/models/user.rb]
+  Eg: PCC alice 1234
+    User u added a credit card with last 4 digits n as a payment method.
+    PHA usr 123-456-7890                                                      [TODO]
+    Phone number activated (when a phone number is added it shows up as USF).
+    PHS usr 123-456-7890                                                      [TODO]
+    Someone replied with STOP to the sms bot.
+    PND TODO                                                                  [TODO]
+  Eg: TODO -- it's about derailing when there's already a charge PeNDing
+    More than one recommit in the past 24 hours for this goal.
+  TODO: This is an airhorn that's cc'd to support. Presumably we also want a
+    translog entry for it but there isn't one in the code currently.
+    PSW usr                                                                   [TODO]
+    Password changed for this user.
+    RBS u/g t(,t1,t2...)                                        [app/models/goal.rb]
+  Eg: BBS bob/foo 12345678900,12345678901
+    Goal u/g was not queued onto the maintenance queue in queue_for_maint
+    because this goal has already been queued onto the maintenance queue at
+    the given timestamps.
+  TODO: Is there still something called "the maintenance" queue since we
+    switched to the queues spec'd at doc.bmndr.com/priority?
+  TODO: For consistency, timestamps should be space separated.
+    RCM u/g x y                                             [app/models/contract.rb]
+  Eg: RCM bob/foo 5 10
+    User u recommitted on goal g, increasing their pledge from $x to $y.
+    REF u x                           [app/controllers/api/v1/charges_controller.rb]
+  Eg: REF bob 12
+    User u got refunded $x.
+    // -----------------------------------------------------------------------------
+  TODO: let's not do this in the code; makes it confusing to match up the docs:
+  trlog(atype == "zeno" ? "ZNO" : "REM") + " #{yoog} #{goal.nextalert.to_i} #{channel}")  
+    // -----------------------------------------------------------------------------
+    REM u/g n t c                                 [app/performers/goal_alert_job.rb]
+  Eg: REM bob/foo -2 1234567890 eml
+    Reminder of type c (eg, eml or sms) sent, with mail decay now equal to n.
+    The next reminder will be due at time t (unixtime).
+  TODO: Figure out the following comments from Bee. Looks like there's no n
+    anymore.
+    # Not sure this is correct, not seeing both n and t.  it looks like it is format "REM u/g t c" where c is ift, sms, eml, ios, sdm, sch, wbh, and soon to be dro.
+  # Also, ZNO looks like it would be the same format, if it's ZENO vs REMINDER 
+    RES u/g reset link requested              [app/controllers/resets_controller.rb]
+  Eg: RES bob/foo reset link requested
+    User u hit the Reset button for goal g.
+  TODO: Change this code to "RLR" and drop the "reset link requested"
+    RFJ u/g r t                                      [app/performers/refresh_job.rb]
+  Eg: RFJ bob/foo user 1234567890
+    Refresh job queued for goal u/g for reason r in {user, maint, remind, zeno}
+    at timestamp t.
+  TODO: What is the difference between the timestamp t and the timestamp of
+    the translog entry itself?
+  TODO: Confirm the possible reasons r. In the code it's called "action";
+    does "action" or "reason" make more sense?
+    RFR u/g                                                     [app/models/goal.rb]
+  Eg: RFR bob/foo
+    Refresh. Data sent to Beebrain at the goal's deadline to refresh the graph.
+    RKT t                                                                     [TODO]
+    RKT runkeeper error of type T occurred.
+    RKV u/g r                                                     [lib/runkeeper.rb]
+  Eg: RKV bob/runkeeper Revoked
+    Runkeeper revoked. Got a "delete_health" response from the Runkeeper app,
+    indicating they revoked access for the Beeminder app in Runkeeper. The
+    reason r comes from the Runkeeper API; probably always "Revoked". The
+    translog entry is specific to the given user u and goal g because that's
+    the goal we were trying to update when we got this response from Runkeeper
+    but it means that all of user u's Runkeeper goals will no longer work.
+    RRL u/g x y                                             [app/models/contract.rb]
+  Eg: RRL bob/foo 0 5
+    Rerail. User u, goal g, rerailed going from $x to $y.
+    RRT u/g, o -> n                                             [app/models/goal.rb]
+  Eg: RRT bob/foo,  [] -> [[1234567890, nil, 0]]
+    User u ratcheted goal g, changing the road from old road o to new road n.
+  TODO: As part of the Great Translog Refactor of 2020 (aka H-Day), let's
+    change this to RAT.
+    RSP u/g                                             [app/mailers/goal_mailer.rb]
+  Eg: RSP bob/foo
+    Response. Bot responded to an email to say datapoints were successfully
+    added.
+    RSQ u/g e                                                    [lib/rescuetime.rb]
+    Resque error. Username/goalname followed by the JSON error string.
+    RSR u/g                              [app/controllers/admin/goals_controller.rb]
+  Eg: RSR bob/foo
+    Resurrection. User u, goal g claimed "not legit" on a goal and we believed
+    them and unfroze, canceling any charge. Formerly "NLG" but that would've
+    been years before 2020.
+  TODO: What's this about unfreezing? Does this only apply when a goal
+    derailed without a payment method or something such that the derailment
+    caused the goal to freeze?
+    RST u/g x                              [app/controllers/contracts_controller.rb]
+  Eg: bob/foo 5
+  TODO: What is this? It wasn't part of the original translog; not sure when
+    it was added.
+    RZP u/g r                                                   [app/models/goal.rb]
+  Eg: bob/foo confusion
+    Reason to zap. User gave reason r for deleting goal u/g in the goal deletion
+    dialog.
+    SBP u p x                       [app/models/user.rb, app/models/subscription.rb]
+  Eg: SBP bob beemium 40
+    Premium subscription payment. User u paid $x for premium plan p.
+  TODO: The models/user.rb version of this is {username, plan, chamt} but the
+    models/subscription.rb version is {username, plan, subs_amount, actual}.
+    What determines which version is translogged? For consistency can we make
+    them the same with the two amounts typically the same?
+  SBR from a to b: u/g x -> y                                 [app/models/goal.rb]
+    Eg: SBR from 2015-09-10 to 2015-09-12: bob/foo [] -> [[...],[...]]
+    "Scheduled break". Scheduled a break from date a to date b for goal u/g,
+    changing the road matrix from x to y (old road to new road).
+    TODO: Let's keep the syntax more consistent, like so: SBR u/g a b x y
+    SCI mail t p                              [app/performers/science_mailer_job.rb]
+  Eg: SCI mail TODO TODO
+    "Science".
+  TODO: What is this? Probably not relevant now. How to handle nonce things
+    like this that probably don't belong in the translog docs? Maybe a
+    different kind of code, like more than 3 letters?
+    SDA u/g                                            [lib/akrasia_proof_fields.rb]
+  Eg: SDA bob/foo
+    Goal g was akratically deleted for user u.
+  TODO: Why is this called SDA? Did we mix it up with AKD? In the code this
+    translogs "SDA #{field.to_s} #{shortname}" so this documentation is
+    currently wrong. Also what does "akratically deleted" mean?
+    SDN u/g y x                                             [app/models/contract.rb]
+  Eg: SDN bob/foo 10 5
+    "Stepdown". User u, goal g, stepped down from $y to $x.
+    SEZ u/g a s                                         [app/mailers/goal_mailer.rb]
+  Eg: SEZ bob/foo jill sorry for the beeminder glitch
+    Sez mail sent from admin interface by admin username a with the subject s.
+    SHC u/g x y                                             [app/models/contract.rb]
+  Eg: SHC bob/foo 5 10
+    "Shortcircuit". User u, goal g, shortcircuited from $x to $y.
+  SPM x a: s                             [app/controllers/email_bot_controller.rb]
+    Eg: SPM 14 viagra1423@yahoo.com: Get viagra now
+    The bot received an email from address a with a high (>= 7) spam score x
+    from Mailgun with subject s and did not reply to the email.
+    TODO: We also have a translog code "SPAM" defined in
+      app/controllers/info_controller.rb like so:
+      trlog("SPAM #{params[:email]} contact: #{params[:subject]}")
+      What does that mean and can we merge it with the SPM entry?
+    SSD u/g y x                                             [app/models/contract.rb]
+  Eg: SSD bob/foo 10 5
+    User u, goal g, scheduled a step-down from $y to $x.
+    TGL rate limit toggl u/g                                          [lib/toggl.rb]
+  Eg: TGL rate limit toggl bob/foo
+    User u, goal g is a Toggl autodata goal that got rate limited.
+  TODO: Change this to just "TGL u/g" if we need it at all. Why do we need it?
+    TWE u p                                 [app/performers/send_activation_text.rb]
+  Eg: bob 313-555-1234
+  TODO: Is this for activating a phone number? First adding it? What format is
+    the phone number in?
+    ULZ u/g                                            [app/performers/graph_job.rb]
+  Eg: ULZ bob/foo
+    User u just unlost on goal g; happens on reset or when mucking in admin
+    settings.
+  TODO: What does "unlosing" mean?
+    UNS u                                                       [app/models/user.rb]
+  Eg: UNS bob
+    User u hit the unsubscribe link on a bot email.
+    URC u/g y x                                             [app/models/contract.rb]
+  Eg: URC bob/foo 10 5
+    "Undo recommit". User u claimed "not legit" on goal g and we canceled the
+    original charge and moved the pledge level back from y to x.
+  TODO: Originally this said "on a goal that had precommit to recommit set to
+    ON" and something about pcrc being orthogonal and not wanting a special
+    code for this? First question: Does this translog type appear anymore?
+    URJ u e c                           [app/controllers/api/v1/users_controller.rb]
+  Eg: bob bob@example.com BeemiOS
+    "User creation rejected." Someone tried to create username u with email e by
+  making an API call (specifying c as the client: "BeemiOS", "Beedroid", or
+    "NULL") to the (undocumented) User Create endpoint and we gave them an
+    error because the free plan is/was full. No email confirmation has
+    happened or anything.
+  USF u f: a -> b                                             [app/models/user.rb]
+    [app/models/charge.rb]
+    [app/models/contract.rb]
+    [app/performers/mailgun_job.rb]
+    Eg: USF bob email: bob@example.com -> robert@example.com
+          USF bob subscription: beeplus -> beemium
+    User u changed user field f from a to b. There's a list of excluded fields
+    which don't get logged.
+    This covers PHA and PHS and PSW [TODO: covers? how so? like subsumes?]
+    USR u                                                       [app/models/user.rb]
+  Eg: USR bob
+    New user account created with username u.
+    UWN u/g                                            [app/performers/graph_job.rb]
+  Eg: UWN bob/foo
+    User u just unwon on goal g; happens when a user restarts a goal that they
+    had previously won.
+  TODO: Change this "won/lost" terminology. And is this the same as RST now?
+    WCN u/g                                    [app/controllers/autod_controller.rb]
+  Eg: WCN bob/foo
+    Received a notification callback from Withings for goal u/g, but we have no
+    Withings authorization for goal u/g.
+  TODO: We have a few of these that we can combine and parameterize, like
+    "AUA u/g a" for autodata auth error for the given autodata integration.
+    WDG u/g v i                           [app/controllers/datapoints_controller.rb]
+  Eg: WDG meta/uvi wdgt_1.0.2 192.168.1.1
+    Dashboard widget (version v) from IP address i requested datapoints for u/g.
+  TODO: How could this matter? When's the last time such a translog entry
+    happened?
+    WER u/g e                                                                 [TODO]
+  Eg: log Withings api errors
+    WIN u/g x                                                   [app/models/goal.rb]
+  Eg: WIN bob/foo 0
+    User u just got to the end of their road on goal g with $x pledged.
+  TODO: Calling this "WIN" is a holdover from like 2011 when we thought of
+    goals either "winning" or "losing" instead of just derailments being
+    events that happen sometimes. Ie, it was from before
+    pre-commit-to-recommit. Let's rename this to "END".
+  WKD u/g road after: r                                       [app/models/goal.rb]
+  WKD u/g road before: r
+    TODO: What is this? Weekends-off? Any road change? Why is it separate from
+      just changing the goal field for weekends-off and another translog entry
+      for a change in the road? Also it's gross to have "road before:" and
+      "road after:" in the output of the translog entry.
+    WKO u/g f                                                   [app/models/goal.rb]
+  TODO: Is this for setting weekends-off? How is it different from WKD? And
+    what is that "f" parameter? (In the code it's the symbol "fri".)
+    WPG u/g                                                                   [TODO]
+  Eg: WPG bob/weight
+    Withings updater job for u/g quit because ping of wbsapi failed.
+  TODO: Same story with consolidating/generalizing/parameterizing these
+    Withings things.
+    WRF u/g                                                        [lib/withings.rb]
+  Eg: WRF bob/weight
+    Some other sort of error actually getting response from the Withings API for
+    the u/g update job.
+  TODO: Again, let's have a generic autodata error translog code and make
+    "withings" a parameter.
+    WUN u/g                                                                   [TODO]
+  Eg: WUN bob/weight
+    Got a Withings callback for a goal that has withings = false.
+    WUSER CONF sent e                             [app/performers/wuser_conf_job.rb]
+  Eg: WUSER CONF sent alice@example.com
+  TODO: Why "wuser"? And what should the translog code for this actually be?
+    We have CNF for supporter confirmation emails. Maybe we generalize that
+    with a parameter for what kind of confirmation it was?
+    // -----------------------------------------------------------------------------
+  TODO: is the following a variant of ZPU, zapping a user?
+    trlog("ZAP #{@user.username} by #{current_user.username}")
+    in app/controllers/admin/users_controller.rb
+    // -----------------------------------------------------------------------------
+    ZAP u/g                                                     [app/models/goal.rb]
+  Eg: bob/foo
+    Goal deleted.
+    ZNO u/g t c                                   [app/performers/goal_alert_job.rb]
+  Eg: ZNO bob/foo 1234567890 sms
+    Sent a zeno on channel c to user u for goal g with the next one due to be
+    sent at timestamp t.
+  TODO: See comments at REM
+  TODO: Bee says it would be helpful to also include the baremin/hardcap
+    ZPAUTH u a                                                  [app/models/user.rb]
+  Eg: TODO, what is this? "a.client.name"?
+    ZPU u                                                       [app/models/user.rb]
+  Eg: ZPU bob
+    Deleted (zapped) the user u.
+    ZSV u p                                                  [app/models/service.rb]
+  Eg: bob
+    Zapped the user as well as the goals.
+  TODO: what's the difference between this and ZPU, why do we need both, and
+    what's #{provider}?
+    ZWH u/g t                                   [app/performers/zeno_webhook_job.rb]
+    ZWH ERR u/g t
+  Eg: bob/foo TODO
+  TODO: The t is for "type" but what is type? And what causes the ERR version?
+  
+  TODO: There's a call to trlog() in lib/util.rb -- take a look at it and make
+    sure it doesn't allow any other calls to trlog() to sneak in that we
+    wouldn't find from grepping all other occurrences of "trlog" in the
+    codebase.
